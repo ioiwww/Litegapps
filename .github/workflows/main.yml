@@ -1,7 +1,7 @@
 name: Build Custom LiteGapps (Android 16)
 
 on:
-  [push,workflow_dispatch]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -21,51 +21,50 @@ jobs:
           chmod -R 755 .
           ./build.sh restore
 
-      - name: Prepare Detailed Structure
+      - name: Force Fix Structure
         run: |
-          # السكريبت يبحث في مسار محدد جداً للمعمارية والنوع
-          # المسار المتوقع: core/litegapps/core/arm64/
+          # إنشاء شجرة المجلدات الكاملة التي يطلبها السكريبت
           mkdir -p core/litegapps/core/arm64
           mkdir -p output
           mkdir -p log
           
           # إنشاء ملف الإعدادات
-          echo "version=1.0" > config_base
-          echo "version.code=36" >> config_base
-          echo "codename=Linkit_Clean_OS" >> config_base
-          echo "name.builder=Linkit_Dev" >> config_base
-          echo "set.time.stamp=true" >> config_base
-          echo "date.time=$(date +'%Y%m%d%H%M')" >> config_base
-          echo "compression=br" >> config_base
-          echo "compression.level=9" >> config_base
-          echo "zip.level=9" >> config_base
-          echo "zip.signer=false" >> config_base
-          echo "build.status=litegapps" >> config_base
-          echo "litegapps.build=true" >> config_base
+          cat <<EOF > config_base
+version=1.0
+version.code=36
+codename=Linkit_Clean_OS
+name.builder=Linkit_Dev
+set.time.stamp=true
+date.time=$(date +'%Y%m%d%H%M')
+compression=br
+compression.level=9
+zip.level=9
+zip.signer=false
+build.status=official
+litegapps.build=true
+EOF
           
-          # توزيع الملف في كل الأماكن الممكنة لقطع الطريق على أي خطأ grep
+          # توزيع الملف في كل المسارات الممكنة لإنهاء أزمة grep
           cp config_base config
+          cp config_base core/litegapps/config
           cp config_base core/litegapps/core/config
           cp config_base core/litegapps/core/arm64/config
-          cp config_base core/litegapps/config
 
       - name: Execute Build
         run: |
           chmod +x build.sh
-          # تنفيذ بناء النوع core لمعمارية arm64 لإصدار SDK 36
-          ./build.sh m core arm64 36
+          # تمرير المتغيرات بشكل صريح لتفادي خطأ unary operator
+          # m = make
+          # litegapps = PRODUCT
+          # core = VARIANT
+          # arm64 = ARCH_IN
+          # 36 = SDK_IN
+          ./build.sh m litegapps core arm64 36
 
       - name: Debug Output
         if: always()
         run: |
-          echo "Checking Logs if build failed:"
-          [ -f log/make.log ] && cat log/make.log || echo "No logs found"
-          echo "Listing Output Contents:"
+          echo "==== BUILD LOGS ===="
+          [ -f log/make.log ] && cat log/make.log || echo "No log file found."
+          echo "==== OUTPUT LISTING ===="
           ls -R output/
-
-      - name: Upload Flashable GApps
-        uses: actions/upload-artifact@v4
-        with:
-          name: LiteGapps-Core-A16-Linkit
-          path: output/*.zip
-          if-no-files-found: warn
