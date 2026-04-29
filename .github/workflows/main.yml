@@ -1,0 +1,32 @@
+name: Build My Custom LiteGapps
+on:
+  workflow_dispatch: # للتشغيل اليدوي وقتما تشاء
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zip unzip curl java-common default-jdk
+
+      - name: Restore Binaries (The 'r' command in build.sh)
+        run: |
+          chmod +x build.sh
+          ./build.sh restore
+
+      - name: Build Core GApps for Android 16
+        run: |
+          # هنا نقوم بتشغيل أمر البناء مع تحديد المتغيرات
+          # m = make, core = النوع, arm64 = المعمارية, 36 = SDK Android 16
+          ./build.sh make core arm64 36
+
+      - name: Upload Result
+        uses: actions/upload-artifact@v4
+        with:
+          name: My-Clean-GApps-Android16
+          path: output/*.zip
