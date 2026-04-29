@@ -16,55 +16,50 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y zip unzip curl java-common default-jdk tar
 
-      - name: Restore Binaries & Dependencies
+      - name: Restore Binaries
         run: |
           chmod -R 755 .
           ./build.sh restore
 
       - name: Force Fix Structure
         run: |
-          # إنشاء شجرة المجلدات الكاملة التي يطلبها السكريبت
           mkdir -p core/litegapps/core/arm64
           mkdir -p output
           mkdir -p log
           
-          # إنشاء ملف الإعدادات
-          cat <<EOF > config_base
-version=1.0
-version.code=36
-codename=Linkit_Clean_OS
-name.builder=Linkit_Dev
-set.time.stamp=true
-date.time=$(date +'%Y%m%d%H%M')
-compression=br
-compression.level=9
-zip.level=9
-zip.signer=false
-build.status=official
-litegapps.build=true
-EOF
+          # كتابة الإعدادات بسطور منفصلة لضمان القبول
+          echo "version=1.0" > config
+          echo "version.code=36" >> config
+          echo "codename=Linkit_Clean_OS" >> config
+          echo "name.builder=Linkit_Dev" >> config
+          echo "set.time.stamp=true" >> config
+          echo "date.time=$(date +'%Y%m%d%H%M')" >> config
+          echo "compression=br" >> config
+          echo "compression.level=9" >> config
+          echo "zip.level=9" >> config
+          echo "zip.signer=false" >> config
+          echo "build.status=official" >> config
+          echo "litegapps.build=true" >> config
           
-          # توزيع الملف في كل المسارات الممكنة لإنهاء أزمة grep
-          cp config_base config
-          cp config_base core/litegapps/config
-          cp config_base core/litegapps/core/config
-          cp config_base core/litegapps/core/arm64/config
+          cp config core/litegapps/config
+          cp config core/litegapps/core/config
+          cp config core/litegapps/core/arm64/config
 
       - name: Execute Build
         run: |
           chmod +x build.sh
-          # تمرير المتغيرات بشكل صريح لتفادي خطأ unary operator
-          # m = make
-          # litegapps = PRODUCT
-          # core = VARIANT
-          # arm64 = ARCH_IN
-          # 36 = SDK_IN
           ./build.sh m litegapps core arm64 36
 
       - name: Debug Output
         if: always()
         run: |
-          echo "==== BUILD LOGS ===="
-          [ -f log/make.log ] && cat log/make.log || echo "No log file found."
-          echo "==== OUTPUT LISTING ===="
+          echo "==== LOGS ===="
+          cat log/make.log || echo "No logs"
+          echo "==== FILES ===="
           ls -R output/
+
+      - name: Upload GApps
+        uses: actions/upload-artifact@v4
+        with:
+          name: LiteGapps-Core-A16
+          path: output/
